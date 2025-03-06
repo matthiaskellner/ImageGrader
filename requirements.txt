@@ -1,0 +1,3 @@
+pandas==2.2.3
+PyQt5==5.15.11
+qimage2ndarray==1.10.0
