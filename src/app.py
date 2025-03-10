@@ -28,7 +28,7 @@ class ImageWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        self.setWindowTitle("Image Viewer")
+        self.setWindowTitle("ImageGrader")
         self.resize(1200, 700)
         main_widget = QWidget()
         main_layout = QHBoxLayout()
@@ -66,8 +66,11 @@ class ImageWindow(QMainWindow):
         self.dir_button_output = QPushButton("Select Output Directory")
         self.dir_button_output.clicked.connect(self.select_directory("output"))
 
+        self.filename_textbox = QLineEdit()
+        self.filename_textbox.setPlaceholderText("Enter name of output csv-file (optional)")
+
         self.ending_textbox = QLineEdit()
-        self.ending_textbox.setPlaceholderText("Enter your file ending here...")
+        self.ending_textbox.setPlaceholderText("Enter the file ending of images here...")
         self.ending_button = QPushButton("Confirm File Ending")
         self.ending_button.clicked.connect(self.set_ending)
 
@@ -85,6 +88,7 @@ class ImageWindow(QMainWindow):
         side_layout.addWidget(self.dir_button_input)
         side_layout.addWidget(self.text_label_output)
         side_layout.addWidget(self.dir_button_output)
+        side_layout.addWidget(self.filename_textbox)
         side_layout.addWidget(self.ending_textbox)
         side_layout.addWidget(self.ending_button)
         side_layout.addWidget(self.start_button)
@@ -113,19 +117,30 @@ class ImageWindow(QMainWindow):
                     self.text_label_output.setText(f"Selected Output Directory:\n{dir}")
                     self.output_dir = dir
                 
-                if self.input_dir is not None and self.output_dir is not None and self.ending is not None:
+                if self.input_dir and self.output_dir and self.ending:
                     self.start_button.setEnabled(True)
+                else:
+                    self.start_button.setEnabled(False)
         return _select_directory
     
     def set_ending(self):
         ending = self.ending_textbox.text()
         if ending:
-            self.ending = ending[1:] if ending[0] == '.' else ending
-            if self.input_dir is not None and self.output_dir is not None and self.ending is not None:
+            self.ending = ending.strip('.')
+            if self.input_dir and self.output_dir and self.ending:
                 self.start_button.setEnabled(True)
+            else:
+                self.start_button.setEnabled(False)
+        else:
+            self.start_button.setEnabled(False)
 
     def start_grading(self):
-        self.csv_file = f"{self.output_dir}/{self.input_dir.split('/')[-1]}_GRADES.csv"
+        filename = self.filename_textbox.text()
+        if filename:
+            self.csv_file = f"{self.output_dir}/{filename}.csv"
+        else:
+            self.csv_file = f"{self.output_dir}/{self.input_dir.split('/')[-1]}_GRADES.csv"
+
         if os.path.exists(self.csv_file):
             self.df = pd.read_csv(self.csv_file, usecols=["img_path", "grade"])
         else:
