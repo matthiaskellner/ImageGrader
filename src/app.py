@@ -141,6 +141,13 @@ class ImageWindow(QMainWindow):
         else:
             self.csv_file = f"{self.output_dir}/{self.input_dir.split('/')[-1]}_GRADES.csv"
 
+        print("==================================")
+        print("Starting grading...")
+        print(f"Input directory: {self.input_dir}")
+        print(f"Output csv: {self.csv_file}")
+        print(f"Image file ending: {self.ending}")
+        print("==================================")
+
         if os.path.exists(self.csv_file):
             self.df = pd.read_csv(self.csv_file, usecols=["img_path", "grade"])
         else:
