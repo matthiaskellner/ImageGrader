@@ -15,15 +15,6 @@ GRADES = {
     "3": "BAD"
 }
 
-def _get_images(base_dir, ending, last):
-    images = sorted(glob(f"{base_dir}/*.{ending}"))
-    try:
-        # resume if grading already started
-        idx = images.index(last) + 1
-    except:
-        idx = 0
-    return images[idx:]
-
 class ImageWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -103,9 +94,24 @@ class ImageWindow(QMainWindow):
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
     
+
     def __exit__(self):
         self.df.to_csv(self.csv_file, header=not os.path.exists(self.csv_file), index=False)
     
+
+    def resizeEvent(self, event):
+        self.update_image()
+        super().resizeEvent(event)
+
+
+    def keyPressEvent(self, event):
+        if event.text() in {"1", "2", "3"}:
+            if self.images is not None and self.current_idx < len(self.images):
+                self.grade(event)
+        elif event.text() in {"0", "e"}:
+            self.remove_grade()
+
+
     def select_directory(self, type):
         def _select_directory():
             dir = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -134,6 +140,7 @@ class ImageWindow(QMainWindow):
         else:
             self.start_button.setEnabled(False)
 
+
     def start_grading(self):
         filename = self.filename_textbox.text()
         if filename:
@@ -156,9 +163,20 @@ class ImageWindow(QMainWindow):
             last_image = self.df.iloc[-1]["img_path"]
         except IndexError:
             last_image = None
-        self.images = _get_images(self.input_dir, self.ending, last_image)
+        self.load_images(last_image)
         self.current_idx = 0
         self.update_image()
+
+
+    def load_images(self, last_img):
+        images = sorted(glob(f"{self.input_dir}/*.{self.ending}"))
+        try:
+            # resume if grading already started
+            idx = images.index(last_img) + 1
+        except:
+            idx = 0
+        self.images = images[idx:]
+
 
     def update_image(self):
         if self.images is None:
@@ -176,11 +194,8 @@ class ImageWindow(QMainWindow):
                 self.image_label.setPixmap(scaled_pixmap)
                 self.image_caption_label.setText(self.images[self.current_idx].split('/')[-1])
 
-    def resizeEvent(self, event):
-        self.update_image()
-        super().resizeEvent(event)
     
-    def _grade(self, event):
+    def grade(self, event):
         print(f"{self.images[self.current_idx].split('/')[-1]}    {GRADES[event.text()]}")
         new_data = pd.DataFrame([{"img_path": self.images[self.current_idx], "grade": int(event.text())}])
         self.df = pd.concat([self.df, new_data], ignore_index=True)
@@ -188,7 +203,7 @@ class ImageWindow(QMainWindow):
         self.current_idx += 1
         self.update_image()
     
-    def _remove_grade(self):
+    def remove_grade(self):
         try:
             print(f"Removed grade for  {self.df.iloc[-1]['img_path'].split('/')[-1]}")
             self.df = self.df[:-1]
@@ -196,16 +211,9 @@ class ImageWindow(QMainWindow):
             last_image = self.df.iloc[-1]["img_path"]
         except IndexError:
             last_image = None
-        self.images = _get_images(self.input_dir, self.ending, last_image)
+        self.load_images(last_image)
         self.current_idx = 0
         self.update_image()
-
-    def keyPressEvent(self, event):
-        if event.text() in {"1", "2", "3"}:
-            if self.images is not None and self.current_idx < len(self.images):
-                self._grade(event)
-        elif event.text() in {"0", "e"}:
-            self._remove_grade()
 
 
 if __name__ == "__main__":
