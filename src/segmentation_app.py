@@ -131,7 +131,7 @@ class ImageWindow(QMainWindow):
         self.start_button.setEnabled(False)
         self.start_button.clicked.connect(self.start_grading)
 
-        self.instruction_label = QLabel("\nRate the segmentations by pressing numbers:\n1=GOOD, 2=MEDIUM, 3=BAD, 4=DIFFICULT\nYou can undo the last grade by pressing 'e' or '0'\n\nSegmentations and results are saved in the selected output directory")
+        self.instruction_label = QLabel("\nRate the segmentations by pressing numbers:\n1=GOOD, 2=MEDIUM, 3=BAD, 4=DIFFICULT\nYou can undo the last grade by pressing 'e' or '0'")
         self.instruction_label.setAlignment(Qt.AlignCenter)
         self.instruction_label.setWordWrap(True)
         
