@@ -8,6 +8,7 @@ import qimage2ndarray
 import tifffile
 import numpy as np
 import pandas as pd
+from skimage import filters
 from pathlib import Path
 import sys
 import os
@@ -231,7 +232,7 @@ class ImageWindow(QMainWindow):
         if out_filename:
             self.out_csv_file = f"{self.output_dir}/{out_filename}.csv"
         else:
-            self.out_csv_file = f"{self.output_dir}/{self.input_dir.split('/')[-1]}_SEG_GRADES.csv"
+            self.out_csv_file = f"{self.output_dir}/{self.input_dir.split('/')[-1]}_SEG_GRADES_{self.segmentation_model}_{self.segmentation_diameter}.csv"
 
         self.segmentation_model = self.model_radio_group.checkedButton().text()
         self.segmentation_diameter = int(self.model_diameter_input.text())
@@ -283,7 +284,7 @@ class ImageWindow(QMainWindow):
     def update_image(self, segment=False):
         if self.images is None:
             return
-        
+
         if self.current_img_idx >= len(self.images):
             self.image_label.setText("No images found or none left to grade!")
             self.image_caption_label.setText("")
@@ -297,13 +298,10 @@ class ImageWindow(QMainWindow):
             RGB_image = np.zeros(shape=(*nucleus_image.shape, 3), dtype=np.float32)
             RGB_image[..., 0] = spots_image
             RGB_image[..., 2] = nucleus_image
-            pixmap = QPixmap.fromImage(qimage2ndarray.array2qimage(RGB_image))
 
             if segment:
-                # normalize
-                RGB_image = RGB_image / np.max(RGB_image)
                 self.patches = extract_patches(
-                    RGB_image,
+                    RGB_image / np.max(RGB_image), # normalize
                     model = self.segmentation_model,
                     return_all = True,
                     patch_size = self.segmentation_diameter + 100,
@@ -316,6 +314,10 @@ class ImageWindow(QMainWindow):
                 print(f"Segmented {self.images[self.current_img_idx]}")
                 print(f"Number of segmented nuclei: {self.patch_length}")
                 print("==================================================")
+
+            contours = filters.sobel(self.patches["segmentation"]==self.current_patch_idx+1)
+            RGB_image[contours>0.00001] = [255, 255, 0]
+            pixmap = QPixmap.fromImage(qimage2ndarray.array2qimage(RGB_image))
 
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -359,24 +361,24 @@ class ImageWindow(QMainWindow):
             self.current_img_idx += 1
             self.update_image(segment=True)
         else:
-            self.update_patch_image()
+            self.update_image(segment=False)
     
 
     def remove_grade(self):
+        segment = False
         try:
-            print(f"Removed grade for  {self.df.iloc[-1]['img_path'].split('/')[-1]}   Patch {self.current_patch_idx-1}")
+            print(f"Removed grade for  {self.df.iloc[-1]['img_path'].split('/')[-1]}   Patch {self.df.iloc[-1]['patch_num']}")
+            segment = self.current_patch_idx-1 < 0
+            last_image = self.df.iloc[-1]['img_path']
+            self.current_patch_idx = self.df.iloc[-1]['patch_num']
             self.df = self.df[:-1]
             self.df.to_csv(self.out_csv_file, index=False)
-
-            last_row = self.df.iloc[-1]
-            last_image = last_row["img_path"]
-            self.current_patch_idx = int(last_row["patch_num"]) + 1
         except IndexError:
             last_image = None
             self.current_patch_idx = 0
         self.load_images(last_image)
         self.current_img_idx = 0
-        self.update_image(segment=self.current_patch_idx==0)
+        self.update_image(segment=segment)
 
 
 if __name__ == "__main__":

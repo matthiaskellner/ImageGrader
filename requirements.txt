@@ -4,3 +4,4 @@ PyQt5==5.15.11
 qimage2ndarray==1.10.0
 BioUtensils==0.9
 CellPatchExtraction==1.21
+scikit-image==0.22.0
